@@ -6,6 +6,8 @@ import xml.etree.ElementTree as ET
 import imgaug as ia
 from imgaug import augmenters as iaa
 import argparse
+import json
+import glob
 
 def make_dir(new_dir):
     if not os.path.exists(new_dir):
@@ -46,6 +48,14 @@ def read_train_dataset(dir):
 
     return images, annotations
 
+def xml_to_yolo_bbox(bbox, w, h):
+    # xmin, ymin, xmax, ymax
+    x_center = ((bbox[2] + bbox[0]) / 2) / w
+    y_center = ((bbox[3] + bbox[1]) / 2) / h
+    width = (bbox[2] - bbox[0]) / w
+    height = (bbox[3] - bbox[1]) / h
+    return [x_center, y_center, width, height]
+
 def aug_code(dir: str,
               new_dir: str,
               method: str):
@@ -77,11 +87,18 @@ def aug_code(dir: str,
                 iaa.Multiply((1.2, 1.2))
             ])
 
-        if method == 'co':
-            # color
+        if method == 'dc':
+            # dark color
             seq = iaa.Sequential([
                 iaa.WithBrightnessChannels(
                     iaa.Add(-40), from_colorspace=iaa.CSPACE_BGR)
+            ])
+
+        if method == 'bc':
+            # bright color
+            seq = iaa.Sequential([
+                iaa.WithBrightnessChannels(
+                    iaa.Add(40), from_colorspace=iaa.CSPACE_BGR)
             ])
 
         if method == 'ts':
@@ -132,6 +149,38 @@ def aug_code(dir: str,
         with open(new_xml_file, "w", encoding='utf-8') as f:
             f.write(xml_str)
 
+        classes = ['구진', '농포', '결절', '낭포', '결절/낭포', '켈로이드', '화이트헤드', '블랙헤드', '모낭염', '여드름자국', '여드름흉터', '표피낭종']
+        files = glob.glob(os.path.join(new_dir, '*.xml'))
+
+        for fil in files:
+            basename = os.path.basename(fil)
+            filename = os.path.splitext(basename)[0]
+            if not os.path.exists(os.path.join(new_dir, f"{filename}.jpg")):
+                print(f"{filename} image does not exist!")
+                continue
+
+            result = []
+
+            tree = ET.parse(fil)
+            root = tree.getroot()
+            width = int(root.find("size").find("width").text)
+            height = int(root.find("size").find("height").text)
+
+            for obj in root.findall('object'):
+                label = obj.find("name").text
+                if label not in classes:
+                    classes.append(label)
+                index = classes.index(label)
+                pil_bbox = [int(x.text) for x in obj.find("bndbox")]
+                yolo_bbox = xml_to_yolo_bbox(pil_bbox, width, height)
+
+                bbox_string = " ".join([str(x) for x in yolo_bbox])
+                result.append(f"{index} {bbox_string}")
+
+            if result:
+                with open(os.path.join(new_dir, f"{filename}.txt"), "w", encoding="utf-8") as f:
+                    f.write("\n".join(result))
+
 def main():
     parser = argparse.ArgumentParser(
         description='IMAGE AUGMENTATION')
@@ -149,5 +198,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
