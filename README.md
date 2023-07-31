@@ -34,7 +34,8 @@ python aug.py --dir 'D:/img_folder/all_ex/' --new_dir 'D:/img_folder/img_aug/' -
 - method : augmentation method 
   - 'rn': rotate & noise
   - 'fc': flip & color
-  - 'co': color
+  - 'dc': dark color
+  - 'bc': bright color
   - 'ts': translation & shearing
   - 'cr': crop & resize & rotate
 
