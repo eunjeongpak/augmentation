@@ -72,11 +72,57 @@ def aug_code(dir: str,
             ia_bounding_boxes.append(ia.BoundingBox(x1=box[1], y1=box[2], x2=box[3], y2=box[4]))
         bbs = ia.BoundingBoxesOnImage(ia_bounding_boxes, shape=image.shape)
 
+        if method == 'rddc':
+            # rotate & deep dark color
+            seq = iaa.Sequential([
+                iaa.WithBrightnessChannels(
+                    iaa.Add(-80), from_colorspace=iaa.CSPACE_BGR),
+                iaa.Rot90((1, 3), keep_size=True)
+            ])
+
+        if method == 'rdc':
+            # rotate & dark color
+            seq = iaa.Sequential([
+                iaa.WithBrightnessChannels(
+                    iaa.Add(-40), from_colorspace=iaa.CSPACE_BGR),
+                iaa.Rot90((1, 3), keep_size=True)
+            ])
+
+        if method == 'rldc':
+            # rotate & little dark color
+            seq = iaa.Sequential([
+                iaa.WithBrightnessChannels(
+                    iaa.Add(-20), from_colorspace=iaa.CSPACE_BGR),
+                iaa.Rot90((1, 3), keep_size=True)
+            ])
+
+        if method == 'rbc':
+            # rotate & bright color
+            seq = iaa.Sequential([
+                iaa.WithBrightnessChannels(
+                    iaa.Add(20), from_colorspace=iaa.CSPACE_BGR),
+                iaa.Rot90((1, 3), keep_size=True)
+            ])
+
+        if method == 'rlc':
+            # rotate & light color
+            seq = iaa.Sequential([
+                iaa.WithBrightnessChannels(
+                    iaa.Add(40), from_colorspace=iaa.CSPACE_BGR),
+                iaa.Rot90((1, 3), keep_size=True)
+            ])
+
         if method == 'rn':
             # rotate & noise
             seq = iaa.Sequential([
                 iaa.Rot90(1),
-                iaa.AddElementwise((-20, 20), per_channel=0.5)
+                iaa.AddElementwise((20, -20), per_channel=0.5)
+            ])
+
+        if method == 'rgn':
+            # rotate & gaussian noise
+            seq = iaa.Sequential([
+                iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.05 * 255), per_channel=0.5)
             ])
 
         if method == 'fc':
@@ -85,20 +131,6 @@ def aug_code(dir: str,
                 iaa.Fliplr(1),
                 iaa.Flipud(0.2),
                 iaa.Multiply((1.2, 1.2))
-            ])
-
-        if method == 'dc':
-            # dark color
-            seq = iaa.Sequential([
-                iaa.WithBrightnessChannels(
-                    iaa.Add(-40), from_colorspace=iaa.CSPACE_BGR)
-            ])
-
-        if method == 'bc':
-            # bright color
-            seq = iaa.Sequential([
-                iaa.WithBrightnessChannels(
-                    iaa.Add(40), from_colorspace=iaa.CSPACE_BGR)
             ])
 
         if method == 'ts':
@@ -110,7 +142,7 @@ def aug_code(dir: str,
                 )
             ])
 
-        if method == 'cr':
+        if method == 'crr':
             # crop & resize & rotate
             seq = iaa.Sequential([
                 iaa.Rotate(90),
@@ -119,8 +151,14 @@ def aug_code(dir: str,
 
         seq_det = seq.to_deterministic()
 
-        image_aug = seq_det.augment_images([image])[0]
-        bbs_aug = seq_det.augment_bounding_boxes([bbs])[0]
+        try:
+            image_aug = seq_det.augment_images([image])[0]
+            bbs_aug = seq_det.augment_bounding_boxes([bbs])[0]
+        except cv2.error:
+            image_aug = seq_det.augment_images([np.array(image).astype('uint8')])[0]
+            bbs_aug = seq_det.augment_bounding_boxes([bbs])[0]
+        except Exception:
+            pass
 
         new_image_file = new_dir + method + annotations[idx][2]
         cv2.imwrite(new_image_file, image_aug)
@@ -155,9 +193,6 @@ def aug_code(dir: str,
         for fil in files:
             basename = os.path.basename(fil)
             filename = os.path.splitext(basename)[0]
-            if not os.path.exists(os.path.join(new_dir, f"{filename}.jpg")):
-                print(f"{filename} image does not exist!")
-                continue
 
             result = []
 
