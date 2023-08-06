@@ -26,16 +26,20 @@ cd utils
 python aug.py --dir {dir} --new_dir {new_dir} -- method {method}
 [--example]
 cd utils
-python aug.py --dir 'D:/img_folder/all_ex/' --new_dir 'D:/img_folder/img_aug/' --method 'fc'
+python aug.py --dir 'D:/img_folder/all_ex/' --new_dir 'D:/img_folder/img_aug/' --method 'rddc'
 ```
 
 - dir : original file path
 - new_dir : the location where you want to save the results
-- method : augmentation method 
+- method : augmentation method
+  - 'rddc': rotate & deep dark color
+  - 'rdc': rotate & dark color
+  - 'rldc': rotate & little dark color
+  - 'rbc': rotate & bright color
+  - 'rlc': rotate & light color
   - 'rn': rotate & noise
+  - 'rgn': rotate & gaussian noise
   - 'fc': flip & color
-  - 'dc': dark color
-  - 'bc': bright color
   - 'ts': translation & shearing
-  - 'cr': crop & resize & rotate
+  - 'crr': crop & resize & rotate
 
